@@ -90,7 +90,7 @@ public:
      * the long templated class name to refer to their super class. */
     typedef AdditionalTopicSubscriber<MessageType> ATSClass;
 
-    AdditionalTopicSubscriber(const QString& propertyName, Display* display, DisplayContext* context, ros::NodeHandle& update_nh, const function<void (shared_ptr<const MessageType>)>& messageCallback)
+    AdditionalTopicSubscriber(const QString& propertyName, Display* display, DisplayContext* context, ros::NodeHandle& update_nh, const boost::function<void (boost::shared_ptr<const MessageType>)>& messageCallback)
             : tf_filter(NULL), m_messagesReceived(0), m_display(display), m_context(context), m_updateNodeHandle(update_nh), m_enabled(false), m_messageCallback(messageCallback)
     {
         _AdditionalTopicSubscriber::initialize(display, context->getFrameManager());
@@ -200,7 +200,7 @@ private:
     message_filters::Subscriber<MessageType> m_subscriber;
     uint32_t m_messagesReceived;
 
-    const function<void (shared_ptr<const MessageType>)> m_messageCallback;
+    const boost::function<void (boost::shared_ptr<const MessageType>)> m_messageCallback;
 };
 
 } // end namespace rviz
