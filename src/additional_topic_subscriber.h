@@ -33,7 +33,12 @@
 
 #ifndef Q_MOC_RUN
 #include <message_filters/subscriber.h>
+#if ROS_VERSION_MINIMUM(1, 14, 0)
+#include <tf2_ros/message_filter.h>
+#else
 #include <tf/message_filter.h>
+#endif
+
 #include <boost/bind.hpp>
 #include <boost/function.hpp>
 #include <iostream>
@@ -100,7 +105,11 @@ public:
         additional_topic_property_->setMessageType(message_type);
         additional_topic_property_->setDescription(message_type + " topic to subscribe to.");
 
+#if ROS_VERSION_MINIMUM(1, 14, 0)
+        tf_filter = new tf2_ros::MessageFilter<MessageType>(*m_context->getTF2BufferPtr(), "map", 10, m_updateNodeHandle);
+#else
         tf_filter = new tf::MessageFilter<MessageType>(*m_context->getTFClient(), "map", 10, m_updateNodeHandle);
+#endif
 
         tf_filter->connectInput(m_subscriber);
         tf_filter->registerCallback(boost::bind(&AdditionalTopicSubscriber<MessageType>::incomingMessage, this, _1));
@@ -189,7 +198,11 @@ protected:
         m_messageCallback(msg);
     }
 
+#if ROS_VERSION_MINIMUM(1, 14, 0)
+    tf2_ros::MessageFilter<MessageType>* tf_filter;
+#else
     tf::MessageFilter<MessageType>* tf_filter;
+#endif
 
 private:
     std::string m_topic;
