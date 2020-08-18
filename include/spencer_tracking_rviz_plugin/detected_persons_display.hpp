@@ -33,9 +33,12 @@
 
 #ifndef Q_MOC_RUN
 #include <map>
+#include <iomanip>
+#include <iostream>
 #include <boost/circular_buffer.hpp>
-#include <spencer_tracking_msgs/DetectedPersons.h>
-#include "person_display_common.h"
+#include <spencer_tracking_msgs/msg/detected_persons.hpp>
+#include "spencer_tracking_rviz_plugin/person_display_common.hpp"
+#include "rviz_common/logging.hpp"
 #endif
 
 namespace spencer_tracking_rviz_plugin
@@ -43,12 +46,12 @@ namespace spencer_tracking_rviz_plugin
     /// The visual of a tracked person.
     struct DetectedPersonVisual
     {
-        boost::shared_ptr<Ogre::SceneNode> sceneNode;
+        std::shared_ptr<Ogre::SceneNode> sceneNode;
 
-        boost::shared_ptr<PersonVisual> personVisual;
-        boost::shared_ptr<TextNode> detectionIdText, confidenceText, modalityText;
-        boost::shared_ptr<rviz::Arrow> orientationArrow;
-        boost::shared_ptr<CovarianceVisual> covarianceVisual;
+        std::shared_ptr<PersonVisual> personVisual;
+        std::shared_ptr<TextNode> detectionIdText, confidenceText, modalityText;
+        std::shared_ptr<rviz_rendering::Arrow> orientationArrow;
+        std::shared_ptr<CovarianceVisual> covarianceVisual;
 
         float confidence;
         bool hasValidOrientation;
@@ -57,7 +60,7 @@ namespace spencer_tracking_rviz_plugin
 
     // The DetectedPersonsDisplay class itself just implements a circular buffer,
     // editable parameters, and Display subclass machinery.
-    class DetectedPersonsDisplay: public PersonDisplayCommon<spencer_tracking_msgs::DetectedPersons>
+    class DetectedPersonsDisplay: public PersonDisplayCommon<spencer_tracking_msgs::msg::DetectedPersons>
     {
     Q_OBJECT
     public:
@@ -73,16 +76,18 @@ namespace spencer_tracking_rviz_plugin
         // and broken.
         
         virtual void onInitialize();
+        // Function to handle an incoming ROS message.
+        void processMessage(spencer_tracking_msgs::msg::DetectedPersons::ConstSharedPtr msg) override;
 
     protected:
         // A helper to clear this display back to the initial state.
         virtual void reset();
 
         // Must be implemented by derived classes because MOC doesn't work in templates
-        virtual rviz::DisplayContext* getContext() {
+        virtual rviz_common::DisplayContext* getContext() {
             return context_;
         }
-
+       
     private Q_SLOTS:
         void personVisualTypeChanged();
 
@@ -90,23 +95,22 @@ namespace spencer_tracking_rviz_plugin
         virtual void stylesChanged();
 
     private:
-        // Function to handle an incoming ROS message.
-        void processMessage(const spencer_tracking_msgs::DetectedPersons::ConstPtr& msg);
-       
+        
+
         // All currently active tracks, with unique track ID as map key
-        vector<boost::shared_ptr<DetectedPersonVisual> > m_previousDetections;
+        vector<std::shared_ptr<DetectedPersonVisual> > m_previousDetections;
 
         // Properties
-        rviz::BoolProperty* m_render_covariances_property;
-        rviz::BoolProperty* m_render_detection_ids_property;
-        rviz::BoolProperty* m_render_confidences_property;
-        rviz::FloatProperty* m_low_confidence_threshold_property;
-        rviz::FloatProperty* m_low_confidence_alpha_property;
-        rviz::BoolProperty* m_render_orientations_property;
-        rviz::BoolProperty* m_render_modality_text_property;
+        rviz_common::properties::BoolProperty* m_render_covariances_property;
+        rviz_common::properties::BoolProperty* m_render_detection_ids_property;
+        rviz_common::properties::BoolProperty* m_render_confidences_property;
+        rviz_common::properties::FloatProperty* m_low_confidence_threshold_property;
+        rviz_common::properties::FloatProperty* m_low_confidence_alpha_property;
+        rviz_common::properties::BoolProperty* m_render_orientations_property;
+        rviz_common::properties::BoolProperty* m_render_modality_text_property;
 
-        rviz::FloatProperty* m_text_spacing_property;
-        rviz::FloatProperty* m_covariance_line_width_property;
+        rviz_common::properties::FloatProperty* m_text_spacing_property;
+        rviz_common::properties::FloatProperty* m_covariance_line_width_property;
     };
 
 } // end namespace spencer_tracking_rviz_plugin

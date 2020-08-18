@@ -32,8 +32,9 @@
 #ifndef COVARIANCE_VISUAL_H
 #define COVARIANCE_VISUAL_H
 
-#include <rviz/ogre_helpers/shape.h>
-#include <rviz/ogre_helpers/billboard_line.h>
+#include "rclcpp/rclcpp.hpp"
+#include <rviz_rendering/objects/shape.hpp>
+#include <rviz_rendering/objects/billboard_line.hpp>
 #include <cmath>
 
 
@@ -47,7 +48,8 @@ namespace spencer_tracking_rviz_plugin {
         }
 
         virtual ~CovarianceVisual() {
-            m_sceneManager->destroySceneNode(m_sceneNode->getName());
+            if (m_sceneNode->getName() != "")
+                m_sceneManager->destroySceneNode(m_sceneNode->getName());
         };
 
         void setPosition(const Ogre::Vector3& position) {
@@ -68,7 +70,8 @@ namespace spencer_tracking_rviz_plugin {
 
         /// NOTE: It is assumed that the covariance matrix is already rotated into the target frame of the sceneNode!
         virtual void setMeanCovariance(const Ogre::Vector3& mean, const Ogre::Matrix3& cov) = 0;
-
+        
+        
     protected:
         Ogre::SceneManager* m_sceneManager;
         Ogre::SceneNode* m_sceneNode;
@@ -80,7 +83,7 @@ namespace spencer_tracking_rviz_plugin {
     public:
         ProbabilityEllipseCovarianceVisual(Ogre::SceneManager* sceneManager, Ogre::SceneNode* parentNode) : CovarianceVisual(sceneManager, parentNode)
         {
-            m_line = new rviz::BillboardLine(m_sceneManager, m_sceneNode);
+            m_line = new rviz_rendering::BillboardLine(m_sceneManager, m_sceneNode);
         }
 
         virtual ~ProbabilityEllipseCovarianceVisual() {
@@ -99,17 +102,20 @@ namespace spencer_tracking_rviz_plugin {
             int numberOfPoints;
             double *xs, *ys;
             double determinant = cov[0][0]*cov[1][1] - cov[1][0]*cov[0][1];
-
+            rclcpp::Logger logger = rclcpp::get_logger("spencer_tracking_rviz_plugin.CovarianceVisual");
+            rclcpp::Clock clock(RCL_ROS_TIME);
             m_line->clear();
 
             if(!std::isfinite(determinant)) {
-                ROS_WARN_STREAM_THROTTLE(5.0, "Covariance matrix has non-finite values in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " << cov);
+                RCLCPP_WARN_STREAM_THROTTLE(logger, clock, 5,
+                         "Covariance matrix has non-finite values in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " << cov);
                 return;
             }
 
             if(std::abs(cov[0][1] - cov[1][0]) > 0.00001)
             {
-                ROS_WARN_STREAM_THROTTLE(5.0, "Covariance matrix is not symmetric in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " << cov);
+                RCLCPP_WARN_STREAM_THROTTLE(logger, clock, 5,
+                    "Covariance matrix is not symmetric in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " << cov);
                 return;
             }
 
@@ -125,13 +131,15 @@ namespace spencer_tracking_rviz_plugin {
                 }
             }
             else {
-                ROS_WARN_STREAM_THROTTLE(5.0, "Covariance matrix is not positive (semi-)definite in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " << cov);
+                RCLCPP_WARN_STREAM_THROTTLE(logger, clock, 5000,
+                    "Covariance matrix is not positive (semi-)definite in ProbabilityEllipseCovarianceVisual::setMeanCovariance(): " <<
+                    cov);
             }
             
         }
 
     private:
-        rviz::BillboardLine* m_line;
+        rviz_rendering::BillboardLine* m_line;
 
         // Puts angle alpha into the interval [min..min+2*pi[
         double set_angle_to_range(double alpha, double min)

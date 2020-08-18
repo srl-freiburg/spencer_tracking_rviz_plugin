@@ -31,14 +31,23 @@
 #ifndef PERSON_VISUAL_H
 #define PERSON_VISUAL_H
 
-#include <rviz/ogre_helpers/shape.h>
-#include <rviz/ogre_helpers/billboard_line.h>
+#include <rviz_rendering/objects/shape.hpp>
+#include <rviz_rendering/objects/billboard_line.hpp>
+#include <rviz_rendering/mesh_loader.hpp>
+#include <resource_retriever/retriever.h>
 
-#include <OgreSceneNode.h>
+#include <OgreSceneManager.h>
+#include <OgreSubEntity.h>
+#include <OgreMaterialManager.h>
+#include <OgreTextureManager.h>
+#include <OgreTechnique.h>
 #include <OgreAnimation.h>
+#include <OgreSceneNode.h>
 #include <OgreSharedPtr.h>
 #include <OgreEntity.h>
 
+#include "rviz_common/logging.hpp"
+#include "rviz_common/uniform_string_stream.hpp"
 
 namespace spencer_tracking_rviz_plugin {
     // Abstract class for visuals which have got an adjustable line width
@@ -69,7 +78,8 @@ namespace spencer_tracking_rviz_plugin {
         }
 
         virtual ~PersonVisual() {
-            m_sceneManager->destroySceneNode(m_sceneNode->getName());
+            if (m_sceneNode->getName() != "")
+                m_sceneManager->destroySceneNode(m_sceneNode->getName());
         };
 
         void setPosition(const Ogre::Vector3& position) {
@@ -116,8 +126,8 @@ namespace spencer_tracking_rviz_plugin {
     public:
         CylinderPersonVisual(const PersonVisualDefaultArgs& args) : PersonVisual(args)
         {
-            m_bodyShape = new rviz::Shape(rviz::Shape::Cylinder, args.sceneManager, m_sceneNode);
-            m_headShape = new rviz::Shape(rviz::Shape::Sphere, args.sceneManager, m_sceneNode);
+            m_bodyShape = new rviz_rendering::Shape(rviz_rendering::Shape::Cylinder, args.sceneManager, m_sceneNode);
+            m_headShape = new rviz_rendering::Shape(rviz_rendering::Shape::Sphere, args.sceneManager, m_sceneNode);
 
             const float headDiameter = 0.4;
             const float totalHeight = getHeight();
@@ -145,7 +155,7 @@ namespace spencer_tracking_rviz_plugin {
         }
 
     private:
-        rviz::Shape *m_bodyShape, *m_headShape;
+        rviz_rendering::Shape *m_bodyShape, *m_headShape;
     };
 
 
@@ -187,7 +197,7 @@ namespace spencer_tracking_rviz_plugin {
     protected:
         virtual void generateWireframe() {
             delete m_wireframe;
-            m_wireframe = new rviz::BillboardLine(m_sceneManager, m_sceneNode);
+            m_wireframe = new rviz_rendering::BillboardLine(m_sceneManager, m_sceneNode);
             
             m_wireframe->setLineWidth(m_lineWidth);   
             m_wireframe->setMaxPointsPerLine(2);
@@ -199,27 +209,27 @@ namespace spencer_tracking_rviz_plugin {
 
             // Front quad
                                         m_wireframe->addPoint(bottomLeft);          m_wireframe->addPoint(bottomRight);
-            m_wireframe->newLine();     m_wireframe->addPoint(bottomRight);         m_wireframe->addPoint(topRight);
-            m_wireframe->newLine();     m_wireframe->addPoint(topRight);            m_wireframe->addPoint(topLeft);
-            m_wireframe->newLine();     m_wireframe->addPoint(topLeft);             m_wireframe->addPoint(bottomLeft);
+            m_wireframe->finishLine();     m_wireframe->addPoint(bottomRight);         m_wireframe->addPoint(topRight);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topRight);            m_wireframe->addPoint(topLeft);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topLeft);             m_wireframe->addPoint(bottomLeft);
 
             // Rear quad
-            m_wireframe->newLine();     m_wireframe->addPoint(bottomLeft + rear);   m_wireframe->addPoint(bottomRight + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(bottomRight + rear);  m_wireframe->addPoint(topRight + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(topRight + rear);     m_wireframe->addPoint(topLeft + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(topLeft + rear);      m_wireframe->addPoint(bottomLeft + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(bottomLeft + rear);   m_wireframe->addPoint(bottomRight + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(bottomRight + rear);  m_wireframe->addPoint(topRight + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topRight + rear);     m_wireframe->addPoint(topLeft + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topLeft + rear);      m_wireframe->addPoint(bottomLeft + rear);
 
             // Four connecting lines between front and rear
-            m_wireframe->newLine();     m_wireframe->addPoint(bottomLeft);          m_wireframe->addPoint(bottomLeft + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(bottomRight);         m_wireframe->addPoint(bottomRight + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(topRight);            m_wireframe->addPoint(topRight + rear);
-            m_wireframe->newLine();     m_wireframe->addPoint(topLeft);             m_wireframe->addPoint(topLeft + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(bottomLeft);          m_wireframe->addPoint(bottomLeft + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(bottomRight);         m_wireframe->addPoint(bottomRight + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topRight);            m_wireframe->addPoint(topRight + rear);
+            m_wireframe->finishLine();     m_wireframe->addPoint(topLeft);             m_wireframe->addPoint(topLeft + rear);
         
             m_wireframe->setPosition(Ogre::Vector3(-w/2, w/2, -h/2));
         } 
 
     private:
-        rviz::BillboardLine *m_wireframe;
+        rviz_rendering::BillboardLine *m_wireframe;
         double m_width, m_height, m_scalingFactor, m_lineWidth;
     };
 
@@ -254,7 +264,7 @@ namespace spencer_tracking_rviz_plugin {
     protected:
         virtual void generateCrosshair() {
             delete m_crosshair;
-            m_crosshair = new rviz::BillboardLine(m_sceneManager, m_sceneNode);
+            m_crosshair = new rviz_rendering::BillboardLine(m_sceneManager, m_sceneNode);
             
             m_crosshair->setLineWidth(m_lineWidth);   
             m_crosshair->setMaxPointsPerLine(2);
@@ -268,17 +278,17 @@ namespace spencer_tracking_rviz_plugin {
             Ogre::Vector3 arrow_a(0.7*w, -0.2*w, 0), arrow_m(w, 0, 0), arrow_b(0.7*w, +0.2*w, 0);
 
                                         m_crosshair->addPoint(p1a);         m_crosshair->addPoint(p1b);
-            m_crosshair->newLine();     m_crosshair->addPoint(p2a);         m_crosshair->addPoint(p2b);
-            m_crosshair->newLine();     m_crosshair->addPoint(p3a);         m_crosshair->addPoint(p3b);
+            m_crosshair->finishLine();     m_crosshair->addPoint(p2a);         m_crosshair->addPoint(p2b);
+            m_crosshair->finishLine();     m_crosshair->addPoint(p3a);         m_crosshair->addPoint(p3b);
 
-            m_crosshair->newLine();     m_crosshair->addPoint(arrow_m);     m_crosshair->addPoint(arrow_a);
-            m_crosshair->newLine();     m_crosshair->addPoint(arrow_m);     m_crosshair->addPoint(arrow_b);
+            m_crosshair->finishLine();     m_crosshair->addPoint(arrow_m);     m_crosshair->addPoint(arrow_a);
+            m_crosshair->finishLine();     m_crosshair->addPoint(arrow_m);     m_crosshair->addPoint(arrow_b);
 
             m_crosshair->setPosition(Ogre::Vector3(0, 0, 0));
         } 
 
     private:
-        rviz::BillboardLine *m_crosshair;
+        rviz_rendering::BillboardLine *m_crosshair;
         double m_width, m_height, m_lineWidth;
     };
 

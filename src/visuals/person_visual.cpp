@@ -28,27 +28,8 @@
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#include "spencer_tracking_rviz_plugin/visuals/person_visual.hpp"
 
-#include <rviz/mesh_loader.h>
-#ifndef Q_MOC_RUN
-#include <ros/console.h>
-#include <ros/package.h>
-#include <resource_retriever/retriever.h>
-
-#include <boost/algorithm/string/predicate.hpp>
-#include <boost/filesystem.hpp>
-#endif
-#include <OgreSceneManager.h>
-#include <OgreSubEntity.h>
-#include <OgreMaterialManager.h>
-#include <OgreTextureManager.h>
-#include <OgreTechnique.h>
-#include <OgreAnimation.h>
-
-#include "person_visual.h"
-
-
-namespace fs = boost::filesystem;
 
 namespace spencer_tracking_rviz_plugin {
 
@@ -56,23 +37,22 @@ namespace spencer_tracking_rviz_plugin {
 class RosPackagePathResourceLoadingListener : public Ogre::ResourceLoadingListener
 {
 public:
-    RosPackagePathResourceLoadingListener(const fs::path& parentPath) : _parentPath(parentPath) {
+    RosPackagePathResourceLoadingListener(std::string parentPath) : _parentPath(parentPath) {
     }
 
     /** This event is called when a resource beings loading. */
     virtual Ogre::DataStreamPtr resourceLoading(const Ogre::String &name, const Ogre::String &group, Ogre::Resource *resource) {
-      fs::path absolutePath = _parentPath / name;
-      ROS_INFO_STREAM("RosPackagePathResourceLoadingListener loading resource: " << absolutePath.string());
-
+      std::string absolutePath = _parentPath + "/" + name;
+      RVIZ_COMMON_LOG_INFO_STREAM("RosPackagePathResourceLoadingListener loading resource: " << absolutePath);
       try
       {
         resource_retriever::Retriever retriever;
-        _lastResource = retriever.get(absolutePath.string()); // not thread-safe!
+        _lastResource = retriever.get(absolutePath); // not thread-safe!
         return Ogre::DataStreamPtr(new Ogre::MemoryDataStream(_lastResource.data.get(), _lastResource.size));
       }
       catch (resource_retriever::Exception& e)
       {
-        ROS_ERROR("In RosPackagePathResourceLoadingListener: %s", e.what());
+        RVIZ_COMMON_LOG_ERROR_STREAM("In RosPackagePathResourceLoadingListener: " << e.what());
         return Ogre::DataStreamPtr();
       }
     }
@@ -85,7 +65,7 @@ public:
     }
 
 private:
-    const fs::path& _parentPath;
+    const std::string _parentPath;
     resource_retriever::MemoryResource _lastResource;
 };
 
@@ -96,17 +76,15 @@ MeshPersonVisual::MeshPersonVisual(const PersonVisualDefaultArgs& args) : Person
     m_childSceneNode = m_sceneNode->createChildSceneNode();
     m_childSceneNode->setVisible(false);
 
-    std::string meshResource = "package://" ROS_PACKAGE_NAME "/media/animated_walking_man.mesh";
-
+    std::string meshResource = "package://spencer_tracking_rviz_plugin/media/animated_walking_man.mesh";
+    std::string parent_path = "package://spencer_tracking_rviz_plugin/media";
     /// This is required to load referenced skeletons from package:// path
-    fs::path model_path(meshResource);
-    fs::path parent_path(model_path.parent_path());
-
+  
     Ogre::ResourceLoadingListener *newListener = new RosPackagePathResourceLoadingListener(parent_path), 
                                   *oldListener = Ogre::ResourceGroupManager::getSingleton().getLoadingListener();
 
     Ogre::ResourceGroupManager::getSingleton().setLoadingListener(newListener);
-    bool loadFailed = rviz::loadMeshFromResource(meshResource).isNull();
+    bool loadFailed = rviz_rendering::loadMeshFromResource(meshResource).isNull();
     Ogre::ResourceGroupManager::getSingleton().setLoadingListener(oldListener);
 
     delete newListener;
@@ -160,8 +138,8 @@ MeshPersonVisual::~MeshPersonVisual() {
         }
     }
     materials_.clear();
-
-    m_sceneManager->destroySceneNode(m_childSceneNode->getName());
+    if (m_childSceneNode->getName() != "")
+        m_sceneManager->destroySceneNode(m_childSceneNode->getName());
 }
 
 void MeshPersonVisual::setColor(const Ogre::ColourValue& c) {
@@ -209,7 +187,7 @@ void MeshPersonVisual::setAnimationState(const std::string& nameOfAnimationState
       }
 
       // Not found. Set first animation state then.
-      ROS_WARN_STREAM_ONCE("Person mesh animation state " << nameOfAnimationState << " does not exist in mesh!");
+      RVIZ_COMMON_LOG_WARNING_STREAM("Person mesh animation state " << nameOfAnimationState << " does not exist in mesh!");
       setAnimationState("");
     }
 }
