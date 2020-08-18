@@ -48,3 +48,4 @@ However, these displays can be combined with the tracked persons display (which 
 - [ ] Social relations
 - [ ] Social activities
 - [ ] Human attributes
+- [ ] Python send msgs test
