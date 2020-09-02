@@ -40,7 +40,6 @@
 #include <rviz_rendering/objects/billboard_line.hpp>
 
 #include <spencer_tracking_msgs/msg/tracked_persons.hpp>
-
 #include <spencer_tracking_rviz_plugin/person_display_common.hpp>
 #endif
 
@@ -128,13 +127,13 @@ namespace spencer_tracking_rviz_plugin
 
         // Scene node for track history visualization
         std::shared_ptr<Ogre::SceneNode> m_trackHistorySceneNode;
-        std::string m_realFixedFrame;
 
         // User-editable property variables.
-        rviz_common::properties::FloatProperty* m_occlusion_alpha_property;
-        rviz_common::properties::FloatProperty* m_missed_alpha_property;
-        rviz_common::properties::IntProperty*   m_history_length_property;
-        rviz_common::properties::IntProperty*   m_delete_after_ncycles_property;
+        rviz_common::properties::FloatProperty*  m_occlusion_alpha_property;
+        rviz_common::properties::FloatProperty*  m_missed_alpha_property;
+        rviz_common::properties::StringProperty* m_tracking_frame_property;
+        rviz_common::properties::IntProperty*    m_history_length_property;
+        rviz_common::properties::IntProperty*    m_delete_after_ncycles_property;
 
         rviz_common::properties::BoolProperty* m_show_deleted_property;
         rviz_common::properties::BoolProperty* m_show_occluded_property;

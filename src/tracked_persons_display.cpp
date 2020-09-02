@@ -28,15 +28,6 @@
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
-#ifndef Q_MOC_RUN
-//#include <rviz/visualization_manager.h>
-//#include <rviz/frame_manager.h>
-//#include "rviz/selection/selection_manager.h"
-//#include <boost/lexical_cast.hpp>
-//#include <boost/tokenizer.hpp>
-//#include <boost/foreach.hpp>
-#endif
 #include "spencer_tracking_rviz_plugin/tracked_persons_display.hpp"
 //#define foreach BOOST_FOREACH
 
@@ -50,7 +41,6 @@ void TrackedPersonsDisplay::onInitialize()
 {
     PersonDisplayCommon::onInitialize();
 
-    m_realFixedFrame = "odom";
     QObject::connect(m_commonProperties->style, SIGNAL(changed()), this, SLOT(personVisualTypeChanged()) );
 
     m_occlusion_alpha_property = new rviz_common::properties::FloatProperty( "Occlusion alpha", 0.3, "Alpha multiplier for occluded tracks", this, SLOT(stylesChanged()) );
@@ -64,6 +54,8 @@ void TrackedPersonsDisplay::onInitialize()
     m_history_length_property->setMax( 10000000 );
 
     m_delete_after_ncycles_property = new rviz_common::properties::IntProperty( "Delete after no. cycles", 100, "After how many time steps to delete an old track that has not been seen again, including its history", this, SLOT(stylesChanged()));
+    m_tracking_frame_property = new rviz_common::properties::StringProperty( "Tracking frame", "odom", "Coordinate frame into which track history should be transformed. Usually the fixed frame of the tracker.", this, SLOT(stylesChanged()));
+
     m_delete_after_ncycles_property->setMin( 0 );
     m_delete_after_ncycles_property->setMax( 10000000 );
 
@@ -111,7 +103,8 @@ void TrackedPersonsDisplay::update(float wall_dt, float ros_dt)
     // Move map scene node
     Ogre::Vector3 mapFramePosition; Ogre::Quaternion mapFrameOrientation;
     rclcpp::Clock clock(RCL_ROS_TIME);
-    getContext()->getFrameManager()->getTransform(m_realFixedFrame, clock.now(), mapFramePosition, mapFrameOrientation);
+    getContext()->getFrameManager()->getTransform(m_tracking_frame_property->getStdString(), clock.now(), mapFramePosition, mapFrameOrientation);
+
     Ogre::Matrix4 mapFrameTransform(mapFrameOrientation); mapFrameTransform.setTrans(mapFramePosition);
     m_trackHistorySceneNode->setPosition(mapFramePosition);
     m_trackHistorySceneNode->setOrientation(mapFrameOrientation);
@@ -258,7 +251,7 @@ void TrackedPersonsDisplay::processMessage(spencer_tracking_msgs::msg::TrackedPe
 
     // Transform from map/odometry frame into fixed frame, required to display track history if the fixed frame is not really "fixed" (e.g. base_link)
     Ogre::Vector3 mapFramePosition; Ogre::Quaternion mapFrameOrientation;
-    getContext()->getFrameManager()->getTransform(m_realFixedFrame, msg->header.stamp, mapFramePosition, mapFrameOrientation);
+    getContext()->getFrameManager()->getTransform(m_tracking_frame_property->getStdString(), msg->header.stamp, mapFramePosition, mapFrameOrientation);
     Ogre::Matrix4 mapFrameTransform(mapFrameOrientation); mapFrameTransform.setTrans(mapFramePosition);
 
     // Transform required to fix orientation of any Cylinder shapes
