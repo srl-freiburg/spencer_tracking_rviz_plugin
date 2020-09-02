@@ -28,15 +28,10 @@
 *  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-#include <rviz/visualization_manager.h>
-#include <rviz/frame_manager.h>
-#include "rviz/selection/selection_manager.h"
+//#include <rviz_common/frame_manager.hpp>
+//#include "rviz_common/selection/selection_manager.hpp"
+#include "spencer_tracking_rviz_plugin/detected_persons_display.hpp"
 
-#include "detected_persons_display.h"
-#ifndef Q_MOC_RUN
-#include <boost/foreach.hpp>
-#endif
-#define foreach BOOST_FOREACH
 
 namespace spencer_tracking_rviz_plugin
 {
@@ -49,18 +44,18 @@ void DetectedPersonsDisplay::onInitialize()
 
     QObject::connect(m_commonProperties->style, SIGNAL(changed()), this, SLOT(personVisualTypeChanged()) );
 
-    m_render_covariances_property       = new rviz::BoolProperty( "Render covariances", true, "Render track covariance ellipses", this, SLOT(stylesChanged()) );
-    m_render_detection_ids_property     = new rviz::BoolProperty( "Render detection IDs", true, "Render IDs of the detection that a track was matched against, if any", this, SLOT(stylesChanged()));
-    m_render_confidences_property       = new rviz::BoolProperty( "Render confidences", false, "Render detection confidences", this, SLOT(stylesChanged()));
-    m_render_orientations_property      = new rviz::BoolProperty( "Render orientation arrows", true, "Render orientation arrows (only if orientation covariances are finite!)", this, SLOT(stylesChanged()));
-    m_render_modality_text_property     = new rviz::BoolProperty( "Render modality text", false, "Render detection modality as text below detected person", this, SLOT(stylesChanged()));
+    m_render_covariances_property       = new rviz_common::properties::BoolProperty( "Render covariances", true, "Render track covariance ellipses", this, SLOT(stylesChanged()) );
+    m_render_detection_ids_property     = new rviz_common::properties::BoolProperty( "Render detection IDs", true, "Render IDs of the detection that a track was matched against, if any", this, SLOT(stylesChanged()));
+    m_render_confidences_property       = new rviz_common::properties::BoolProperty( "Render confidences", false, "Render detection confidences", this, SLOT(stylesChanged()));
+    m_render_orientations_property      = new rviz_common::properties::BoolProperty( "Render orientation arrows", true, "Render orientation arrows (only if orientation covariances are finite!)", this, SLOT(stylesChanged()));
+    m_render_modality_text_property     = new rviz_common::properties::BoolProperty( "Render modality text", false, "Render detection modality as text below detected person", this, SLOT(stylesChanged()));
 
-    m_text_spacing_property = new rviz::FloatProperty( "Text spacing", 1.0, "Factor for vertical spacing betweent texts", this, SLOT(stylesChanged()), this );
+    m_text_spacing_property = new rviz_common::properties::FloatProperty( "Text spacing", 1.0, "Factor for vertical spacing betweent texts", this, SLOT(stylesChanged()), this );
     
-    m_low_confidence_threshold_property = new rviz::FloatProperty( "Low-confidence threshold", 0.5, "Detection confidence below which alpha will be reduced", this, SLOT(stylesChanged()));
-    m_low_confidence_alpha_property     = new rviz::FloatProperty( "Low-confidence alpha", 0.5, "Alpha multiplier for detections with confidence below low-confidence threshold", this, SLOT(stylesChanged()));
+    m_low_confidence_threshold_property = new rviz_common::properties::FloatProperty( "Low-confidence threshold", 0.5, "Detection confidence below which alpha will be reduced", this, SLOT(stylesChanged()));
+    m_low_confidence_alpha_property     = new rviz_common::properties::FloatProperty( "Low-confidence alpha", 0.5, "Alpha multiplier for detections with confidence below low-confidence threshold", this, SLOT(stylesChanged()));
 
-    m_covariance_line_width_property = new rviz::FloatProperty( "Line width", 0.1, "Line width of covariance ellipses", m_render_covariances_property, SLOT(stylesChanged()), this );
+    m_covariance_line_width_property = new rviz_common::properties::FloatProperty( "Line width", 0.1, "Line width of covariance ellipses", m_render_covariances_property, SLOT(stylesChanged()), this );
 }
 
 DetectedPersonsDisplay::~DetectedPersonsDisplay()
@@ -78,7 +73,7 @@ void DetectedPersonsDisplay::reset()
 // Set the rendering style (cylinders, meshes, ...) of detected persons
 void DetectedPersonsDisplay::personVisualTypeChanged()
 {
-    foreach(boost::shared_ptr<DetectedPersonVisual>& detectedPersonVisual, m_previousDetections)
+    for(auto detectedPersonVisual : m_previousDetections)
     {
         detectedPersonVisual->personVisual.reset();
         createPersonVisualIfRequired(detectedPersonVisual->sceneNode.get(), detectedPersonVisual->personVisual);
@@ -89,7 +84,7 @@ void DetectedPersonsDisplay::personVisualTypeChanged()
 // Update dynamically adjustable properties of all existing detections
 void DetectedPersonsDisplay::stylesChanged()
 {
-    foreach(boost::shared_ptr<DetectedPersonVisual> detectedPersonVisual, m_previousDetections)
+    foreach(std::shared_ptr<DetectedPersonVisual> detectedPersonVisual, m_previousDetections)
     {
         bool personHidden = isPersonHidden(detectedPersonVisual->detectionId);
 
@@ -145,7 +140,7 @@ void DetectedPersonsDisplay::stylesChanged()
 }
 
 // This is our callback to handle an incoming message.
-void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::DetectedPersons::ConstPtr& msg)
+void DetectedPersonsDisplay::processMessage(spencer_tracking_msgs::msg::DetectedPersons::ConstSharedPtr msg)
 {
     // Get transforms into fixed frame etc.
     if(!preprocessMessage(msg)) return;
@@ -159,16 +154,16 @@ void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::Detecte
     //
     // Iterate over all detections in this message and create a visual representation
     //
-    for (vector<spencer_tracking_msgs::DetectedPerson>::const_iterator detectedPersonIt = msg->detections.begin(); detectedPersonIt != msg->detections.end(); ++detectedPersonIt)
+    for (vector<spencer_tracking_msgs::msg::DetectedPerson>::const_iterator detectedPersonIt = msg->detections.begin(); detectedPersonIt != msg->detections.end(); ++detectedPersonIt)
     {
-        boost::shared_ptr<DetectedPersonVisual> detectedPersonVisual;
+        std::shared_ptr<DetectedPersonVisual> detectedPersonVisual;
 
         // Create a new visual representation of the detected person
-        detectedPersonVisual = boost::shared_ptr<DetectedPersonVisual>(new DetectedPersonVisual);
+        detectedPersonVisual = std::shared_ptr<DetectedPersonVisual>(new DetectedPersonVisual);
         m_previousDetections.push_back(detectedPersonVisual);
 
         // This scene node is the parent of all visualization elements for the detected person
-        detectedPersonVisual->sceneNode = boost::shared_ptr<Ogre::SceneNode>(scene_node_->createChildSceneNode());
+        detectedPersonVisual->sceneNode = std::shared_ptr<Ogre::SceneNode>(scene_node_->createChildSceneNode());
         detectedPersonVisual->detectionId = detectedPersonIt->detection_id;
         detectedPersonVisual->confidence = detectedPersonIt->confidence;
         Ogre::SceneNode* currentSceneNode = detectedPersonVisual->sceneNode.get();
@@ -179,7 +174,7 @@ void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::Detecte
         //
 
         // Create new visual for the person itself, if needed
-        boost::shared_ptr<PersonVisual> &personVisual = detectedPersonVisual->personVisual;
+        std::shared_ptr<PersonVisual> &personVisual = detectedPersonVisual->personVisual;
         createPersonVisualIfRequired(currentSceneNode, personVisual);
 
         const double personHeight = personVisual ? personVisual->getHeight() : 0;
@@ -211,7 +206,7 @@ void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::Detecte
                 detectedPersonVisual->confidenceText.reset(new TextNode(context_->getSceneManager(), currentSceneNode));
             }
 
-            ss.str(""); ss << fixed << setprecision(2) << detectedPersonIt->confidence;
+            ss.str(""); ss << fixed << std::setprecision(2) << detectedPersonIt->confidence;
             detectedPersonVisual->confidenceText->setCaption(ss.str());
             detectedPersonVisual->confidenceText->showOnTop();
 
@@ -244,7 +239,7 @@ void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::Detecte
         // Orientation arrows
         //
         if (!detectedPersonVisual->orientationArrow) {
-            detectedPersonVisual->orientationArrow.reset(new rviz::Arrow(context_->getSceneManager(), currentSceneNode));
+            detectedPersonVisual->orientationArrow.reset(new rviz_rendering::Arrow(context_->getSceneManager(), currentSceneNode));
         }
 
         // Update orientation arrow
@@ -268,12 +263,12 @@ void DetectedPersonsDisplay::processMessage(const spencer_tracking_msgs::Detecte
     //
     ss.str("");
     ss << msg->detections.size() << " detections received";
-    setStatusStd(rviz::StatusProperty::Ok, "Tracks", ss.str());
+    setStatusStd(rviz_common::properties::StatusProperty::Ok, "Tracks", ss.str());
 }
 
 } // end namespace spencer_tracking_rviz_plugin
 
 // Tell pluginlib about this class.  It is important to do this in
 // global scope, outside our package's namespace.
-#include <pluginlib/class_list_macros.h>
-PLUGINLIB_EXPORT_CLASS(spencer_tracking_rviz_plugin::DetectedPersonsDisplay, rviz::Display)
+#include <pluginlib/class_list_macros.hpp>
+PLUGINLIB_EXPORT_CLASS(spencer_tracking_rviz_plugin::DetectedPersonsDisplay, rviz_common::Display)

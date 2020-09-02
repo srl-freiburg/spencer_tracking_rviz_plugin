@@ -1,33 +1,37 @@
-<package>
+<package format="2">
   <name>spencer_tracking_rviz_plugin</name>
-  <version>1.0.8</version>
-
+  <version>8.2.0</version>
   <description>
      RViz plugin for visualizing tracked and detected persons and groups
   </description>
-
+  <maintainer email="jonatan.gines@urjc.es">jginesclavero</maintainer>
   <maintainer email="linder@cs.uni-freiburg.de">Timm Linder</maintainer>
   <author email="linder@cs.uni-freiburg.de">Timm Linder</author>
+  <license>BSD</license>
 
-  <license>BSD; CC BY 3.0 (Fugue Icons by Yusuke Kamiyamane)</license>
-  
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <build_depend>rviz</build_depend>
-  <build_depend>spencer_tracking_msgs</build_depend>
-  <build_depend>spencer_social_relation_msgs</build_depend>
-  <build_depend>spencer_human_attribute_msgs</build_depend>
-  <build_depend>roslib</build_depend>
+  <build_depend>qtbase5-dev</build_depend>
+  <build_depend>rviz_ogre_vendor</build_depend>
 
-  <run_depend>rviz</run_depend>
-  <run_depend>spencer_tracking_msgs</run_depend>
-  <run_depend>spencer_social_relation_msgs</run_depend>
-  <run_depend>spencer_human_attribute_msgs</run_depend>
-  <run_depend>roslib</run_depend>
+  <build_export_depend>rviz_ogre_vendor</build_export_depend>
 
+  <exec_depend>libqt5-core</exec_depend>
+  <exec_depend>libqt5-gui</exec_depend>
+  <exec_depend>libqt5-opengl</exec_depend>
+  <exec_depend>libqt5-widgets</exec_depend>
+  <exec_depend>rviz_ogre_vendor</exec_depend>
+
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>resource_retriever</depend>
+  <depend>rviz_common</depend>
+  <depend>rviz_rendering</depend>
+  <depend>spencer_tracking_msgs</depend>
+  <depend>spencer_social_relation_msgs</depend>
+  <depend>spencer_human_attribute_msgs</depend>
 
   <export>
-      <rviz plugin="${prefix}/plugin_description.xml"/>
+    <build_type>ament_cmake</build_type>
   </export>
-
 </package>

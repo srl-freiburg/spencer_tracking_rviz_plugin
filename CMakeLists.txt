@@ -27,90 +27,159 @@
 #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+cmake_minimum_required(VERSION 3.5)
 
-cmake_minimum_required(VERSION 2.8.3)
 project(spencer_tracking_rviz_plugin)
 
-find_package(catkin REQUIRED COMPONENTS rviz spencer_tracking_msgs spencer_human_attribute_msgs spencer_social_relation_msgs)
-catkin_package()
-include_directories(${catkin_INCLUDE_DIRS})
-link_directories(${catkin_LIBRARY_DIRS})
-
-
-
-## This plugin includes Qt widgets, so we must include Qt.
-## We'll use the version that rviz used so they are compatible.
-if(rviz_QT_VERSION VERSION_LESS "5")
-  message(STATUS "Using Qt4 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-  find_package(Qt4 ${rviz_QT_VERSION} EXACT REQUIRED QtCore QtGui)
-  ## pull in all required include dirs, define QT_LIBRARIES, etc.
-  include(${QT_USE_FILE})
-  qt4_wrap_cpp(MOC_FILES
-  src/detected_persons_display.h
-  src/tracked_persons_display.h
-  src/tracked_groups_display.h
-  src/social_relations_display.h
-  src/social_activities_display.h
-  src/human_attributes_display.h
-  src/person_display_common.h
-  src/additional_topic_subscriber.h
-)
-else()
-  message(STATUS "Using Qt5 based on the rviz_QT_VERSION: ${rviz_QT_VERSION}")
-  find_package(Qt5 ${rviz_QT_VERSION} EXACT REQUIRED Core Widgets)
-  ## make target_link_libraries(${QT_LIBRARIES}) pull in all required dependencies
-  set(QT_LIBRARIES Qt5::Widgets)
-  qt5_wrap_cpp(MOC_FILES
-  src/detected_persons_display.h
-  src/tracked_persons_display.h
-  src/tracked_groups_display.h
-  src/social_relations_display.h
-  src/social_activities_display.h
-  src/human_attributes_display.h
-  src/person_display_common.h
-  src/additional_topic_subscriber.h
-)
+# Default to C++14
+if(NOT CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 14)
 endif()
 
-add_definitions(-DQT_NO_KEYWORDS)
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic -Wnon-virtual-dtor -Woverloaded-virtual)
+endif()
 
+# Tests currently only run on OS X @ OSRF jenkins
+# Enable on Linux by providing a display, enable on Windows via EnableDisplayTests=True
+option(EnableDisplayTests "EnableDisplayTests")
+set(DisplayTests "False" CACHE STRING "DisplayTestsVariable")
 
+if(DEFINED ENV{DISPLAY})
+  set(DISPLAYPRESENT TRUE)
+endif()
 
-set(SOURCE_FILES
+if(APPLE OR DISPLAYPRESENT OR EnableDisplayTests STREQUAL "True")
+  message(STATUS "Enabling tests requiring a display")
+else()
+  set(SKIP_DISPLAY_TESTS "SKIP_TEST")
+endif()
+
+# options and directories for visual tests (see visual_testing_framework documentation)
+option(EnableVisualTests "decides whether or not to enable the tests")
+
+add_definitions(-D_BUILD_DIR_PATH="${CMAKE_CURRENT_BINARY_DIR}")
+add_definitions(-D_SRC_DIR_PATH="${CMAKE_CURRENT_SOURCE_DIR}")
+
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/test_images)
+file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test/reference_images)
+
+# Run visual tests only if "EnableVisualTests=True"
+if(EnableVisualTests STREQUAL "True")
+  message(STATUS "Enabling visual tests")
+else()
+  set(SKIP_VISUAL_TESTS "SKIP_TEST")
+endif()
+
+if(MSVC)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
+
+# We specifically don't turn on CMAKE_AUTOMOC, since it generates one huge
+# mocs_compilation.cpp file that takes a lot of memory to compile.  Instead
+# we create individual moc files that can be compiled separately.
+
+find_package(ament_cmake REQUIRED)
+find_package(rviz_common REQUIRED)
+find_package(rviz_rendering REQUIRED)
+find_package(rviz_default_plugins REQUIRED)
+find_package(pluginlib REQUIRED)
+find_package(rviz_ogre_vendor REQUIRED)
+find_package(spencer_tracking_msgs REQUIRED)
+find_package(spencer_human_attribute_msgs REQUIRED)
+find_package(spencer_social_relation_msgs REQUIRED)
+find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+
+set(spencer_tracking_rviz_plugin_headers_to_moc 
+  include/spencer_tracking_rviz_plugin/detected_persons_display.hpp
+  include/spencer_tracking_rviz_plugin/tracked_persons_display.hpp
+  ##include/spencer_tracking_rviz_plugin/tracked_groups_display.hpp
+  ##include/spencer_tracking_rviz_plugin/social_relations_display.hpp
+  ##include/spencer_tracking_rviz_plugin/social_activities_display.hpp
+  ##include/spencer_tracking_rviz_plugin/human_attributes_display.hpp
+  include/spencer_tracking_rviz_plugin/person_display_common.hpp
+  ##include/spencer_tracking_rviz_plugin/additional_topic_subscriber.hpp
+)
+
+foreach(header "${spencer_tracking_rviz_plugin_headers_to_moc}")
+  qt5_wrap_cpp(spencer_tracking_rviz_plugin_moc_files "${header}")
+endforeach()
+
+set(spencer_tracking_rviz_plugin_source_files
   src/detected_persons_display.cpp
   src/tracked_persons_display.cpp
-  src/tracked_groups_display.cpp
-  src/social_relations_display.cpp
-  src/social_activities_display.cpp
-  src/human_attributes_display.cpp
+  ##src/tracked_groups_display.cpp
+  ##src/social_relations_display.cpp
+  ##src/social_activities_display.cpp
+  ##src/human_attributes_display.cpp
   src/person_display_common.cpp
-  src/tracked_persons_cache.cpp
+  ##src/tracked_persons_cache.cpp
   src/visuals/person_visual.cpp
-  ${MOC_FILES}
 )
 
-
-add_library(${PROJECT_NAME} ${SOURCE_FILES})
-add_dependencies(${PROJECT_NAME} ${catkin_EXPORTED_TARGETS}) # for generation of message dependencies
-target_link_libraries(${PROJECT_NAME} ${QT_LIBRARIES} ${catkin_LIBRARIES})
-
-
-install(TARGETS
-  ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+add_library(spencer_tracking_rviz_plugin SHARED
+  ${spencer_tracking_rviz_plugin_moc_files}
+  ${spencer_tracking_rviz_plugin_source_files}
 )
 
-install(FILES 
-  plugin_description.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+target_include_directories(spencer_tracking_rviz_plugin PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+  ${Qt5Widgets_INCLUDE_DIRS}
+)
 
-install(DIRECTORY media/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/media)
+target_link_libraries(spencer_tracking_rviz_plugin PUBLIC
+  rviz_ogre_vendor::OgreMain
+  rviz_ogre_vendor::OgreOverlay
+)
 
-install(DIRECTORY icons/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/icons)
+# Causes the visibility macros to use dllexport rather than dllimport,
+# which is appropriate when building the dll but not consuming it.
+target_compile_definitions(spencer_tracking_rviz_plugin PRIVATE "SPENCER_TRACKING_RVIZ_PLUGIN_BUILDING_LIBRARY")
 
-install(PROGRAMS scripts/send_test_msgs.py
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
+# prevent pluginlib from using boost
+target_compile_definitions(spencer_tracking_rviz_plugin PUBLIC "PLUGINLIB__DISABLE_BOOST_FUNCTIONS")
+
+pluginlib_export_plugin_description_file(rviz_common plugins_description.xml)
+
+ament_target_dependencies(spencer_tracking_rviz_plugin
+  PUBLIC
+  spencer_tracking_msgs
+  spencer_human_attribute_msgs
+  spencer_social_relation_msgs
+  rviz_common
+  rviz_rendering
+  rviz_default_plugins
+)
+
+ament_export_include_directories(include)
+ament_export_interfaces(spencer_tracking_rviz_plugin HAS_LIBRARY_TARGET)
+ament_export_dependencies(
+  Qt5
+  rviz_common
+  rviz_rendering
+  rviz_default_plugins
+  rviz_ogre_vendor
+  spencer_tracking_msgs
+  spencer_human_attribute_msgs
+  spencer_social_relation_msgs
+)
+
+install(
+  TARGETS spencer_tracking_rviz_plugin
+  EXPORT spencer_tracking_rviz_plugin
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+  INCLUDES DESTINATION include
+)
+
+install(DIRECTORY include DESTINATION include)
+install(DIRECTORY media DESTINATION share/${PROJECT_NAME})
+
+install(
+  DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/icons"
+  DESTINATION "share/${PROJECT_NAME}"
+)
+
+ament_package()

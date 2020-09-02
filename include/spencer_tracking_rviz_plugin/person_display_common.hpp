@@ -35,31 +35,29 @@
 #include <map>
 #include <set>
 #include <boost/circular_buffer.hpp>
-#include <spencer_tracking_msgs/TrackedPersons.h>
-#include <geometry_msgs/Twist.h>
-#include <rviz/message_filter_display.h>
+#include <spencer_tracking_msgs/msg/tracked_persons.hpp>
+#include <geometry_msgs/msg/twist.hpp>
+#include <rviz_common/message_filter_display.hpp>
 
 #include <OGRE/OgreSceneNode.h>
 #include <OGRE/OgreSceneManager.h>
-#include "visuals/person_visual.h"
-#include "visuals/text_node.h"
-#include "visuals/covariance_visual.h"
-#include <rviz/ogre_helpers/shape.h>
-#include <rviz/properties/bool_property.h>
-#include <rviz/properties/enum_property.h>
-#include <rviz/properties/color_property.h>
-#include <rviz/properties/float_property.h>
-#include <rviz/properties/int_property.h>
-#include <rviz/properties/string_property.h>
-#include <rviz/ogre_helpers/arrow.h>
-#include <rviz/ogre_helpers/movable_text.h>
+#include "visuals/person_visual.hpp"
+#include "visuals/text_node.hpp"
+#include "visuals/covariance_visual.hpp"
+#include <rviz_rendering/objects/shape.hpp>
+#include <rviz_common/display.hpp>
+#include <rviz_common/properties/bool_property.hpp>
+#include <rviz_common/properties/enum_property.hpp>
+#include <rviz_common/properties/color_property.hpp>
+#include <rviz_common/properties/float_property.hpp>
+#include <rviz_common/properties/int_property.hpp>
+#include <rviz_common/properties/string_property.hpp>
+#include <rviz_rendering/objects/arrow.hpp>
+#include <rviz_rendering/objects/movable_text.hpp>
+
+#include <rviz_common/logging.hpp>
+#include <rviz_common/uniform_string_stream.hpp>
 #endif
-
-
-
-
-
-
 
 using namespace std;
 using namespace boost;
@@ -105,45 +103,45 @@ namespace spencer_tracking_rviz_plugin
     class PersonDisplayCommonProperties : public QObject {
     Q_OBJECT
     public:
-        PersonDisplayCommonProperties(rviz::Display* display, StylesChangedSubscriber* stylesChangedSubscriber);
+        PersonDisplayCommonProperties(rviz_common::Display* display, StylesChangedSubscriber* stylesChangedSubscriber);
 
         // User-editable property variables.
-        rviz::EnumProperty* style;
-        rviz::EnumProperty* color_transform;
-        rviz::IntProperty* color_map_offset;
+        rviz_common::properties::EnumProperty* style;
+        rviz_common::properties::EnumProperty* color_transform;
+        rviz_common::properties::IntProperty* color_map_offset;
 
-        rviz::ColorProperty* constant_color;
-        rviz::FloatProperty* alpha;
+        rviz_common::properties::ColorProperty* constant_color;
+        rviz_common::properties::FloatProperty* alpha;
 
-        rviz::FloatProperty* line_width;
-        rviz::FloatProperty* z_offset;
-        rviz::FloatProperty* scaling_factor;
+        rviz_common::properties::FloatProperty* line_width;
+        rviz_common::properties::FloatProperty* z_offset;
+        rviz_common::properties::FloatProperty* scaling_factor;
 
-        rviz::BoolProperty* use_actual_z_position;
+        rviz_common::properties::BoolProperty* use_actual_z_position;
 
-        rviz::EnumProperty*  font_color_style;
-        rviz::ColorProperty* constant_font_color;
-        rviz::FloatProperty* font_scale;
+        rviz_common::properties::EnumProperty*  font_color_style;
+        rviz_common::properties::ColorProperty* constant_font_color;
+        rviz_common::properties::FloatProperty* font_scale;
 
-        rviz::StringProperty* m_excluded_person_ids_property;
-        rviz::StringProperty* m_included_person_ids_property;
+        rviz_common::properties::StringProperty* m_excluded_person_ids_property;
+        rviz_common::properties::StringProperty* m_included_person_ids_property;
 
         /// These sets get updated automatically whenever the corresponding properties are updated.
         set<person_id> m_excludedPersonIDs, m_includedPersonIDs;
 
     private:
-        rviz::Display* m_display;
+        rviz_common::Display* m_display;
         StylesChangedSubscriber* m_stylesChangedSubscriber;
 
         void hideIrrelevantProperties();
-
+        
     private Q_SLOTS:
         void stylesChanged();
     };
 
     /// A display with common properties that are shared by multiple specializations.
     template<typename MessageType>
-    class PersonDisplayCommon: public rviz::MessageFilterDisplay<MessageType>, public StylesChangedSubscriber
+    class PersonDisplayCommon: public rviz_common::MessageFilterDisplay<MessageType>, public StylesChangedSubscriber
     {
     public:
         /// Constructor.  pluginlib::ClassLoader creates instances by calling
@@ -154,9 +152,13 @@ namespace spencer_tracking_rviz_plugin
         /// Overrides base class method
         virtual void onInitialize()
         {
-            rviz::MessageFilterDisplay<MessageType>::onInitialize();
+            rviz_common::MessageFilterDisplay<MessageType>::onInitialize();
             m_commonProperties = new PersonDisplayCommonProperties(this, this);
         }
+        //void processMessage(typename MessageType::ConstSharedPtr msg)
+        //{
+//
+        //}
 
     protected:
         /// Common message processing. This method needs to be called by derived classes
@@ -166,7 +168,9 @@ namespace spencer_tracking_rviz_plugin
             // fixed frame to the frame in the header of this Imu message.  If
             // it fails, we can't do anything else so we return.
             if (!getContext()->getFrameManager()->getTransform(msg->header, m_framePosition, m_frameOrientation)) {
-                ROS_ERROR_THROTTLE(5.0, "Error transforming from frame '%s' into fixed frame!", msg->header.frame_id.c_str());
+                rclcpp::Clock clock(RCL_ROS_TIME);
+                RCLCPP_ERROR_THROTTLE(rclcpp::get_logger("spencer_tracking_rviz_plugin.PersonDisplayCommon"), clock, 5,
+                         "Error transforming from frame '%s' into fixed frame!", msg->header.frame_id.c_str());
                 return false;
             }
 
@@ -175,7 +179,7 @@ namespace spencer_tracking_rviz_plugin
         }
 
         /// Create a visual representation of the person itself, if not set yet
-        void createPersonVisualIfRequired(Ogre::SceneNode* sceneNode, boost::shared_ptr<PersonVisual> &personVisual)
+        void createPersonVisualIfRequired(Ogre::SceneNode* sceneNode, std::shared_ptr<PersonVisual> &personVisual)
         {
             if (!personVisual) {
                 PersonVisualDefaultArgs defaultArgs(getContext()->getSceneManager(), sceneNode);
@@ -195,7 +199,7 @@ namespace spencer_tracking_rviz_plugin
         }
 
         /// Applies common styles which apply to person visuals, such as line width etc.
-        void applyCommonStyles(boost::shared_ptr<PersonVisual> &personVisual) {
+        void applyCommonStyles(std::shared_ptr<PersonVisual> &personVisual) {
             if(!personVisual) return;
 
             // Set line width of wireframe visualization
@@ -209,14 +213,14 @@ namespace spencer_tracking_rviz_plugin
         }
 
         // Builds velocity vector for a person from a twist message
-        Ogre::Vector3 getVelocityVector(const geometry_msgs::TwistWithCovariance& twist) {
+        Ogre::Vector3 getVelocityVector(const geometry_msgs::msg::TwistWithCovariance& twist) {
             const double zVelocityVariance = twist.covariance[2 * 6 + 2];
             const double zVelocity = (isnan(zVelocityVariance) || isinf(zVelocityVariance)) ? 0.0 : twist.twist.linear.z;
             return Ogre::Vector3(twist.twist.linear.x, twist.twist.linear.y, zVelocity);
         }
 
         /// Returns true if all xyz rotation variances are finite
-        bool hasValidOrientation(const geometry_msgs::PoseWithCovariance& pose)
+        bool hasValidOrientation(const geometry_msgs::msg::PoseWithCovariance& pose)
         {
             // Check if quaternion has not been initialized, then it's invalid (all-zero elements)
             if(pose.pose.orientation.x == 0 && pose.pose.orientation.y == 0 && pose.pose.orientation.z == 0 && pose.pose.orientation.w == 0) return false;
@@ -235,25 +239,28 @@ namespace spencer_tracking_rviz_plugin
         /// Rotate the position (xyz) part of a pose covariance matrix into the fixed frame used for visualization
         /// The covariance matrix needs to be transformed from the source (e.g. sensor) into the target (e.g. odometry) frame
         /// This is mainly be a problem if the sensor is rotated vertically compared to the odometry frame, so that axes get swapped
-        Ogre::Matrix3 covarianceXYZIntoTargetFrame(const geometry_msgs::PoseWithCovariance& pose) {
+        Ogre::Matrix3 covarianceXYZIntoTargetFrame(const geometry_msgs::msg::PoseWithCovariance& pose) {            
             Ogre::Matrix3 xyzcov;
-            for(int row = 0; row < 3; row++) for(int col = 0; col < 3; col++) xyzcov[row][col] = pose.covariance[row*6 + col]; // 6 = dimension of ROS covariance matrix
-            if(!isfinite(xyzcov.Determinant())) ROS_WARN_STREAM("Covariance matrix supplied to covarianceXYZIntoTargetFrame() contains non-finite elements: " << xyzcov);
+            for(int row = 0; row < 3; row++) 
+                for(int col = 0; col < 3; col++) 
+                    xyzcov[row][col] = pose.covariance[row*6 + col]; // 6 = dimension of ROS covariance matrix
+            if(!isfinite(xyzcov.Determinant())) 
+                RVIZ_COMMON_LOG_WARNING_STREAM("Covariance matrix supplied to covarianceXYZIntoTargetFrame() contains non-finite elements: "<< xyzcov);
             return m_frameRotationMatrix * xyzcov * m_frameRotationMatrix.Transpose(); // cov(AX + a) = A cov(X) A^T
         }
 
         /// Set pose and orientation of person visual
-        void setPoseOrientation(Ogre::SceneNode* sceneNode, const geometry_msgs::PoseWithCovariance& pose, const Ogre::Matrix3& covXYZinTargetFrame, double personVisualHeight)
+        void setPoseOrientation(Ogre::SceneNode* sceneNode, const geometry_msgs::msg::PoseWithCovariance& pose, const Ogre::Matrix3& covXYZinTargetFrame, double personVisualHeight)
         {
-            const geometry_msgs::Point& position = pose.pose.position;
-            const geometry_msgs::Quaternion& orientation = pose.pose.orientation;
+            const geometry_msgs::msg::Point& position = pose.pose.position;
+            const geometry_msgs::msg::Quaternion& orientation = pose.pose.orientation;
 
             Ogre::Matrix4 transform(m_frameOrientation);
             transform.setTrans(m_framePosition);
 
             Ogre::Vector3 originalPosition(position.x, position.y, position.z);
             if(!isfinite(originalPosition.x) || !isfinite(originalPosition.y) || !isfinite(originalPosition.z)) {
-                ROS_WARN("Detected or tracked person has non-finite position! Something is wrong!");
+                RVIZ_COMMON_LOG_WARNING("Detected or tracked person has non-finite position! Something is wrong!");
                 return;
             }
 
@@ -366,7 +373,7 @@ namespace spencer_tracking_rviz_plugin
         }
 
         /// Must be implemented by derived classes because MOC doesn't work in templates
-        virtual rviz::DisplayContext* getContext() = 0;
+        virtual rviz_common::DisplayContext* getContext() = 0;
 
         /// Common properties for the displays in this plugin
         PersonDisplayCommonProperties* m_commonProperties;

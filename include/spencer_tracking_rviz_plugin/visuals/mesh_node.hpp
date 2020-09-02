@@ -31,14 +31,16 @@
 #ifndef MESH_NODE_H
 #define MESH_NODE_H
 
-#include <rviz/mesh_loader.h>
+#include <rviz_rendering/mesh_loader.hpp>
 #ifndef Q_MOC_RUN
 #include <resource_retriever/retriever.h>
 #endif
-#include <rviz/visualization_manager.h>
-#include <rviz/render_panel.h> // hack to get camera position 
-
+// #include <rviz_common/visualization_manager.hpp>
+#include <rviz_common/render_panel.hpp> // hack to get camera position 
+#include <rviz_common/display_context.hpp>
 #include <OgreSceneManager.h>
+#include <OgreSceneNode.h>
+#include <OgreEntity.h>
 #include <OgreSubEntity.h>
 #include <OgreMaterialManager.h>
 #include <OgreTextureManager.h>
@@ -50,7 +52,7 @@
 namespace spencer_tracking_rviz_plugin {
     class MeshNode : public Ogre::FrameListener {
     public:
-        MeshNode(rviz::DisplayContext* displayContext, Ogre::SceneNode* parentNode, const std::string& meshResource, Ogre::Vector3 position = Ogre::Vector3::ZERO)
+        MeshNode(rviz_common::DisplayContext* displayContext, Ogre::SceneNode* parentNode, const std::string& meshResource, Ogre::Vector3 position = Ogre::Vector3::ZERO)
         : m_sceneManager(displayContext->getSceneManager()), m_displayContext(displayContext), m_meshResource(meshResource)
         {
             m_cameraFacing = false;
@@ -58,7 +60,7 @@ namespace spencer_tracking_rviz_plugin {
             m_sceneNode->setVisible(false);
 
             // Load mesh
-            assert(!rviz::loadMeshFromResource(meshResource).isNull());
+            assert(!rviz_rendering::loadMeshFromResource(meshResource).isNull());
 
             // Create scene entity
             std::stringstream ss;
@@ -101,7 +103,8 @@ namespace spencer_tracking_rviz_plugin {
                 }
             }
             m_materials.clear();
-            m_sceneManager->destroySceneNode(m_sceneNode->getName());
+            if (m_sceneNode->getName() != "")
+                m_sceneManager->destroySceneNode(m_sceneNode->getName());
         }
 
         void setOrientation(const Ogre::Quaternion& orientation) {
@@ -162,13 +165,13 @@ namespace spencer_tracking_rviz_plugin {
         virtual bool frameStarted(const Ogre::FrameEvent &evt)
         {
             Ogre::Quaternion cameraQuat;
-            if(m_cameraFacing) {
-                // Align with camera view direction
-                // FIXME: The following way of retrieving the camera and its position is a bit hacky, don't try this at home!
-                rviz::VisualizationManager* visualizationManager = dynamic_cast<rviz::VisualizationManager*>(m_displayContext);
-                assert(visualizationManager != NULL);
-                cameraQuat = visualizationManager->getRenderPanel()->getCamera()->getOrientation();
-            }
+            //if(m_cameraFacing) {
+            //    // Align with camera view direction
+            //    // FIXME: The following way of retrieving the camera and its position is a bit hacky, don't try this at home!
+            //    rviz_common::VisualizationManager* visualizationManager = dynamic_cast<rviz_common::VisualizationManager*>(m_displayContext);
+            //    assert(visualizationManager != NULL);
+            //    cameraQuat = visualizationManager->getRenderPanel()->getCamera()->getOrientation();
+            //}
             m_sceneNode->setOrientation(cameraQuat * m_orientation);
             return true;
         }
@@ -176,7 +179,7 @@ namespace spencer_tracking_rviz_plugin {
     private:
         Ogre::SceneManager* m_sceneManager;
         Ogre::SceneNode* m_sceneNode;
-        rviz::DisplayContext* m_displayContext;
+        rviz_common::DisplayContext* m_displayContext;
 
         Ogre::Quaternion m_orientation;
         Ogre::Entity* m_entity;

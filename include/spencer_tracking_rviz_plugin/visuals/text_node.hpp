@@ -31,8 +31,8 @@
 #ifndef TEXT_NODE_H
 #define TEXT_NODE_H
 
-#include <rviz/ogre_helpers/shape.h>
-#include <rviz/ogre_helpers/movable_text.h>
+#include <rviz_rendering/objects/shape.hpp>
+#include <rviz_rendering/objects/movable_text.hpp>
 
 namespace spencer_tracking_rviz_plugin {
     class TextNode {
@@ -41,8 +41,8 @@ namespace spencer_tracking_rviz_plugin {
         {
             m_sceneNode = parentNode->createChildSceneNode();
 
-            m_text = new rviz::MovableText("text");
-            m_text->setTextAlignment(rviz::MovableText::H_CENTER, rviz::MovableText::V_BELOW);
+            m_text = new rviz_rendering::MovableText("text");
+            m_text->setTextAlignment(rviz_rendering::MovableText::H_CENTER, rviz_rendering::MovableText::V_BELOW);
             m_sceneNode->attachObject(m_text);
 
             setCharacterHeight(1.0);
@@ -51,7 +51,8 @@ namespace spencer_tracking_rviz_plugin {
         }
 
         virtual ~TextNode() {
-            m_sceneManager->destroySceneNode(m_sceneNode->getName());
+            if (m_sceneNode->getName() != "")
+                m_sceneManager->destroySceneNode(m_sceneNode->getName());
             delete m_text;
         };
 
@@ -87,7 +88,7 @@ namespace spencer_tracking_rviz_plugin {
     private:
         Ogre::SceneManager* m_sceneManager;
         Ogre::SceneNode* m_sceneNode;
-        rviz::MovableText* m_text;
+        rviz_rendering::MovableText* m_text;
     };
 
 }

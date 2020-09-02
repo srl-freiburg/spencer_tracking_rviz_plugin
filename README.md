@@ -1,6 +1,9 @@
 RViz plugins for visualization of detected and tracked persons, groups, social relations, activities and human attributes
 -------------------------------------------------------------------------------------------------------------------------
-Author: ©2013-2018 Timm Linder, Social Robotics Laboratory, Albert-Ludwigs-University Freiburg, Germany
+
+## **_WARNING_**: _The migration to ROS2 eloquent is in progress. Please, [check the migrated nodes and the ones still to be migrated](#migration-progress)._ 
+
+Author: ©2013-2015 Timm Linder, Social Robotics Laboratory, Albert-Ludwigs-University Freiburg, Germany
 
 E-mail: linder@cs.uni-freiburg.de
 
@@ -37,7 +40,12 @@ Rviz may crash with a segfault when exiting. This usually can be ignored.
 Person visuals in the tracked groups and human attributes display do not support walking animations.
 However, these displays can be combined with the tracked persons display (which does support animations) by disabling their person visuals.
 
-Related work
-------------
-This Rviz plugin has been developed as part of the larger [SPENCER people tracking](https://github.com/spencer-project/spencer_people_tracking/) project and is provided here in a separate repository as a convenience for users that do not require the full human detection and tracking functionality (e.g. when using the PedSim simulator). We will try to keep this repository up-to-date with the upstream repository as far as possible. The original repository also contains references for citing
-this work.
+
+## Migration progress
+- [x] Detected persons
+- [x] Tracked persons. _(There is a warning log with the covariance and the Person Meshes style causes rviz2 crashed.)_
+- [ ] Tracked groups
+- [ ] Social relations
+- [ ] Social activities
+- [ ] Human attributes
+- [ ] Python send msgs test
